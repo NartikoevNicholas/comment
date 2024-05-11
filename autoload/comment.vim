@@ -29,7 +29,6 @@ function! comment#comment(...)
 		return 
 	endif
 		
-	let is_comment = v:false
 	let ext = s:extentions[extention]
 	if len(ext) == 2
 		let is_comment = s:is_comment(a:1, a:2, ext[0])
