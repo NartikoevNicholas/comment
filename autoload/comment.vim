@@ -1,45 +1,73 @@
 let s:extentions = {
-        \'vim':         '"',
-        \'php':         '//', 
-        \'sql':         '--', 
-        \'py':          '#',
-        \'.vimrc':      '"'
+	\'vim':		['"', '"'],
+	\'.vimrc':	['"', '"'],
+	\'sql':		['-- ', '-- '],
+	\'py':		['#', '#'],
+	\'html':	['<!--', '-->', '<!--', '-->$'],
+	\'css':		['/*', '*/', '/\*', '*/$'],
+	\'php':		['//', '//'],
+	\'js':		['//', '//'],
+	\'cpp':		['//', '//'],
+	\'cs':		['//', '//']	
 \}
 
 
-function! comment#comment()
-	if !exists('g:comment')
-		let extention = expand('%:e') ?? expand('%')
-		if !has_key(s:extentions, extention) 
-			echo 'not found extention ' . extention 
-			return 
+function! s:is_comment(start_line, end_line, extention)
+	for n in range(a:start_line, a:end_line) 
+		if a:extention != trim(getline(n))[:len(a:extention) - 1] 
+			return v:true
 		endif
-		let g:comment = v:true
-		let is_comment = v:false
-		let ext = s:extentions[extention]
-		for n in range(a:firstline, a:lastline)
-			if ext != trim(getline(n))[0] && ext != trim(getline(n))[:1]
-				let is_comment = v:true
-				break
+	endfor
+	return v:false
+endfunction
+
+
+function! comment#comment(...)
+	let extention = expand('%:e') ?? expand('%:t')
+	if !has_key(s:extentions, extention) 
+		echo 'Extention not found ' . '"' . extention . '". Need add extention in array.' 
+		return 
+	endif
+		
+	let is_comment = v:false
+	let ext = s:extentions[extention]
+	if len(ext) == 2
+		let is_comment = s:is_comment(a:1, a:2, ext[0])
+		for n in range(a:1, a:2)
+			if is_comment
+				call setline(n, ext[0] . getline(n))
+			else
+				call setline(n, substitute(getline(n), ext[1], '', ''))
 			endif
 		endfor
-		for n in range(a:firstline, a:lastline)
-			call setline(n, is_comment ? ext . getline(n) : substitute(getline(n), ext, '', ''))
+	else
+		let is_comment = s:is_comment(a:1, a:2, ext[0])
+		for n in range(a:1, a:2)
+			if is_comment
+				call setline(n, ext[0] . getline(n) . ext[1])
+			else
+				call setline(n, substitute(substitute(getline(n), ext[2], '', ''), ext[3], '', ''))
+			endif
 		endfor
 	endif
 
-	if line('.') == a:lastline
-		if exists('g:comment_direction') && a:firstline < g:comment_direction[1]
-			let g:comment_direction[1] = a:firstline - 1
+"	set cursor position
+	if exists('g:comment_direction')
+		if a:1 < g:comment_direction[1]
+			let g:comment_direction[1] = a:1 - 1
 			call setpos('.', g:comment_direction)
 		else
-			let cur_pos = getcurpos()
-			let cur_pos[1] += 1
-			call setpos('.', cur_pos)
+			let g:comment_direction[1] = a:2 + 1
+			call setpos('.', g:comment_direction)
 		endif
-		unlet g:comment
+		unlet g:comment_direction
+	else
+		let cur_pos = getcurpos()
+		let cur_pos[1] += 1
+		call setpos('.', cur_pos) 	
 	endif
 endfunction
+
 
 augroup VisualEvent
 	autocmd!
